@@ -30,7 +30,7 @@ $PowerShell.Dispose() # Clean up after yourself.
 #region BasicExample2
 <#
     The Difference is with .Invoke() it will keep the console 'reserved or active'.
-    This way you can't use if for anything else while the runspace is active. In this example
+    This way you can't use it for anything else while the runspace is active. In this example
     you'll be waiting 10 seconds on the sleep.
  #>
 $Runspace = [runspacefactory]::CreateRunspace()
@@ -133,31 +133,31 @@ Get-Runspace  | ft
 #endregion
 
 #region TrickToPrintOutputToConsoleFromRunspace
-    (Get-Runspace -Name * | where {$_.RunspaceAvailability -like "*Available*"}).Dispose() # clean up old threads
-    $runspacepool = [runspacefactory]::CreateRunspacePool(1, 3) # Create a Tread|runspace-pool with minimum 1 thread\runspace and max 3
-    $runspacepool.Open() # Open the pool before doing anything else
-    $arr = @()
+(Get-Runspace -Name * | where {$_.RunspaceAvailability -like "*Available*"}).Dispose() # clean up old threads
+$runspacepool = [runspacefactory]::CreateRunspacePool(1, 3) # Create a Tread|runspace-pool with minimum 1 thread\runspace and max 3
+$runspacepool.Open() # Open the pool before doing anything else
+$arr = @()
 
-    $scriptblock = {
-        start-sleep -Seconds 10 
-        $D = gci C:\Temp\Windows10_Design_WPF-master
-        $t = gci C:\Temp\s
+$scriptblock = {
+    start-sleep -Seconds 10 
+    $D = gci C:\Temp\Windows10_Design_WPF-master
+    $t = gci C:\Temp\s
 
-        $arr = @($t, $D)
-        $arr
-    }
-    #Execute the $scriptblock 50 times spread over 3 threads.
-    1..50 | % {
-        $ps = [powershell]::create()   # create a new Powershell Instance to do the work
-        $ps.Runspacepool = $runspacepool # Assign it to the pool
-        [void]$ps.AddScript($scriptblock)  # give it some work to do
-        # https://learn-powershell.net/2016/02/14/another-way-to-get-output-from-a-powershell-runspace/
-        $output = New-Object 'System.Management.Automation.PSDataCollection[psobject]' # Trick to retrieve output for $arr
-        $Handle = $ps.BeginInvoke($output, $output)
-    }
-    ''
-    $output
-    ''
-    <# If we run get-runspace, we'll see that it has spinned up 3 threads\runspaces. #>
-    Get-Runspace | ft
+    $arr = @($t, $D)
+    $arr
+}
+#Execute the $scriptblock 50 times spread over 3 threads.
+1..50 | % {
+    $ps = [powershell]::create()   # create a new Powershell Instance to do the work
+    $ps.Runspacepool = $runspacepool # Assign it to the pool
+    [void]$ps.AddScript($scriptblock)  # give it some work to do
+    # https://learn-powershell.net/2016/02/14/another-way-to-get-output-from-a-powershell-runspace/
+    $output = New-Object 'System.Management.Automation.PSDataCollection[psobject]' # Trick to retrieve output for $arr
+    $Handle = $ps.BeginInvoke($output, $output)
+}
+''
+$output
+''
+<# If we run get-runspace, we'll see that it has spinned up 3 threads\runspaces. #>
+Get-Runspace | ft
 #endregion
