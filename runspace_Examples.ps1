@@ -161,3 +161,97 @@ $output
 <# If we run get-runspace, we'll see that it has spinned up 3 threads\runspaces. #>
 Get-Runspace | ft
 #endregion
+
+
+#region Multiple functions in one runspace
+$runspacepool = [runspacefactory]::CreateRunspacePool(1, 3) 
+$runspacepool.Open() 
+
+$myfunction1 = { 
+   Function myfunction1 (){
+    "write to file from myfunction1" | Out-File C:\temp\myfunction.txt -append
+   }
+   myfunction1
+}
+$myfunction2 = { 
+    Function myfunction2 (){
+     "write to file from myfunction2" | Out-File C:\temp\myfunction.txt -append
+    }
+    myfunction2
+ }
+ $myfunction3 = { 
+    Function myfunction3 (){
+     "write to file from myfunction3" | Out-File C:\temp\myfunction.txt -append
+    }
+    myfunction3
+ }
+
+$ps1 = [powershell]::create()   
+$ps2 = [powershell]::create()   
+$ps3 = [powershell]::create()   
+
+$ps1.Runspacepool = $runspacepool 
+$ps2.Runspacepool = $runspacepool 
+$ps3.Runspacepool = $runspacepool 
+
+[void]$ps1.AddScript($myfunction1)  # give it some work to do
+[void]$ps2.AddScript($myfunction2)  # give it some work to do
+[void]$ps3.AddScript($myfunction3)  # give it some work to do
+
+$ps1.BeginInvoke()
+$ps2.BeginInvoke()
+$ps3.BeginInvoke()
+
+(Get-Runspace -Name * | where {$_.RunspaceAvailability -like "*Available*"}).Dispose()
+#endregion
+
+#region above example more dynamic
+$runspacepool = [runspacefactory]::CreateRunspacePool(1, 3) 
+$runspacepool.Open() 
+
+$myfunction1 = { 
+   Function myfunction1 (){
+    "write to file from myfunction1" | Out-File C:\temp\myfunction.txt -append
+   }
+   myfunction1
+}
+$myfunction2 = { 
+    Function myfunction2 (){
+     "write to file from myfunction2" | Out-File C:\temp\myfunction.txt -append
+    }
+    myfunction2
+ }
+ $myfunction3 = { 
+    Function myfunction3 (){
+     "write to file from myfunction3" | Out-File C:\temp\myfunction.txt -append
+    }
+    myfunction3
+ }
+
+cls
+$myFunctionsArray = @($myfunction1,$myfunction2,$myfunction3)
+
+ $instances = foreach ($function in $myFunctionsArray) {
+    $instance = [PowerShell]::Create().AddScript($function)
+    $instance.RunspacePool = $runspacePool
+    $instance.BeginInvoke()
+ }
+
+
+
+(Get-Runspace -Name * | where {$_.RunspaceAvailability -like "*Available*"}).Dispose()
+
+# To get more info from your invoke()
+ $instances = foreach ($function in $myFunctionsArray) {
+    $instance = [PowerShell]::Create().AddScript($function)
+    $instance.RunspacePool = $runspacePool
+    [PSCustomObject]@{
+        Id          = $instance.InstanceId
+        Instance    = $instance
+        AsyncResult = $instance.BeginInvoke()
+    } 
+ }
+#endregion
+
+
+
